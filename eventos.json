@@ -1,0 +1,16 @@
+[
+  {
+    "timestamp": "2026-05-08 16:37:45",
+    "filename": "foto_20260508_163745.jpg",
+    "accion": "rechazar",
+    "resultado": "intento_fallido",
+    "ip_origen": "192.168.137.7"
+  },
+  {
+    "timestamp": "2026-05-08 16:36:40",
+    "filename": "foto_20260508_163640.jpg",
+    "accion": "abrir",
+    "resultado": "autorizado",
+    "ip_origen": "192.168.137.7"
+  }
+]
