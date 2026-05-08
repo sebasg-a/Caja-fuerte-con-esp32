@@ -1,0 +1,7 @@
+recibidas/
+eventos.json
+*.jpg
+__pycache__/
+.env
+venv/
+.venv/
