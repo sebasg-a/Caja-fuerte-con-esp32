@@ -6,7 +6,7 @@ from datetime import datetime
 PUERTO = "COM7"  # Cambia esto por tu COM real
 BAUDRATE = 115200
 
-PERSONA = "sebas"
+PERSONA = "julian"
 DATASET_DIR = "dataset"
 
 MARCA_INICIO = "###IMG_START###"
