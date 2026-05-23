@@ -17,7 +17,7 @@ MODEL_PATH = os.path.join(MODEL_DIR, "lbph_model.yml")
 LABELS_PATH = os.path.join(MODEL_DIR, "labels.json")
 
 MAIL_SENDER = os.environ.get("MAIL_SENDER", "sabes11343388@gmail.com")
-MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD","gufzvhikwfvkwwjo")
+MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "gufzvhikwfvkwwjo")
 MAIL_RECIPIENT = os.environ.get("MAIL_RECIPIENT", "sisaspelele17@gmail.com")
 MAIL_SMTP_HOST = os.environ.get("MAIL_SMTP_HOST", "smtp.gmail.com")
 MAIL_SMTP_PORT = int(os.environ.get("MAIL_SMTP_PORT", 465))
@@ -69,9 +69,11 @@ def registrar_evento(filename, accion, ip_origen, resultado, persona, confianza)
 
 
 def enviar_correo_evento(evento):
-    if not MAIL_SENDER or not MAIL_PASSWORD or not MAIL_RECIPIENT:
-        print("Correo no configurado: faltan variables de entorno")
-        return
+    print("Preparando envio de correo...")
+    print("MAIL_SENDER:", MAIL_SENDER)
+    print("MAIL_RECIPIENT:", MAIL_RECIPIENT)
+    print("MAIL_SMTP_HOST:", MAIL_SMTP_HOST)
+    print("MAIL_SMTP_PORT:", MAIL_SMTP_PORT)
 
     asunto = f"[Caja fuerte] {evento['resultado']} - {evento['persona']}"
 
@@ -289,7 +291,7 @@ def upload():
         try:
             enviar_correo_evento(evento)
         except Exception as e:
-            print("Error enviando correo:", e)
+            print("Error enviando correo:", repr(e))
 
         return jsonify({
             "status": "ok",
