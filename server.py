@@ -2,8 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory
 import os
 import json
 import cv2
-import smtplib
-from email.message import EmailMessage
+import requests
 from datetime import datetime
 
 app = Flask(__name__)
@@ -16,11 +15,11 @@ MODEL_DIR = "model"
 MODEL_PATH = os.path.join(MODEL_DIR, "lbph_model.yml")
 LABELS_PATH = os.path.join(MODEL_DIR, "labels.json")
 
-MAIL_SENDER = os.environ.get("MAIL_SENDER", "sabes11343388@gmail.com")
-MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "gufzvhikwfvkwwjo")
+# Resend / Email API
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+RESEND_FROM = os.environ.get("RESEND_FROM", "Caja Fuerte <notificaciones@tu-dominio.com>")
 MAIL_RECIPIENT = os.environ.get("MAIL_RECIPIENT", "sisaspelele17@gmail.com")
-MAIL_SMTP_HOST = os.environ.get("MAIL_SMTP_HOST", "smtp.gmail.com")
-MAIL_SMTP_PORT = int(os.environ.get("MAIL_SMTP_PORT", 465))
+PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "https://caja-fuerte-con-esp32.onrender.com")
 
 os.makedirs(SAVE_DIR, exist_ok=True)
 
@@ -69,48 +68,52 @@ def registrar_evento(filename, accion, ip_origen, resultado, persona, confianza)
 
 
 def enviar_correo_evento(evento):
-    print("Preparando envio de correo...")
-    print("MAIL_SENDER:", MAIL_SENDER)
-    print("MAIL_RECIPIENT:", MAIL_RECIPIENT)
-    print("MAIL_SMTP_HOST:", MAIL_SMTP_HOST)
-    print("MAIL_SMTP_PORT:", MAIL_SMTP_PORT)
+    if not RESEND_API_KEY:
+        print("Correo no configurado: falta RESEND_API_KEY")
+        return
+
+    image_url = f"{PUBLIC_BASE_URL}/imagen/{evento['filename']}"
+    dashboard_url = f"{PUBLIC_BASE_URL}/"
 
     asunto = f"[Caja fuerte] {evento['resultado']} - {evento['persona']}"
 
-    cuerpo = f"""
-Se registró un nuevo intento de acceso.
+    html = f"""
+    <h2>Nuevo intento de acceso</h2>
+    <p><b>Fecha:</b> {evento['timestamp']}</p>
+    <p><b>Archivo:</b> {evento['filename']}</p>
+    <p><b>Acción:</b> {evento['accion']}</p>
+    <p><b>Resultado:</b> {evento['resultado']}</p>
+    <p><b>Persona:</b> {evento['persona']}</p>
+    <p><b>Confianza:</b> {evento['confianza']}</p>
+    <p><b>IP origen:</b> {evento['ip_origen']}</p>
+    <p><a href="{image_url}">Ver imagen capturada</a></p>
+    <p><a href="{dashboard_url}">Ver historial completo</a></p>
+    """
 
-Fecha: {evento['timestamp']}
-Archivo: {evento['filename']}
-Acción: {evento['accion']}
-Resultado: {evento['resultado']}
-Persona: {evento['persona']}
-Confianza: {evento['confianza']}
-IP origen: {evento['ip_origen']}
-"""
+    payload = {
+        "from": RESEND_FROM,
+        "to": [MAIL_RECIPIENT],
+        "subject": asunto,
+        "html": html,
+    }
 
-    msg = EmailMessage()
-    msg["Subject"] = asunto
-    msg["From"] = MAIL_SENDER
-    msg["To"] = MAIL_RECIPIENT
-    msg.set_content(cuerpo)
+    headers = {
+        "Authorization": f"Bearer {RESEND_API_KEY}",
+        "Content-Type": "application/json",
+    }
 
-    filepath = os.path.join(SAVE_DIR, evento["filename"])
-    if os.path.exists(filepath):
-        with open(filepath, "rb") as f:
-            img_data = f.read()
-        msg.add_attachment(
-            img_data,
-            maintype="image",
-            subtype="jpeg",
-            filename=evento["filename"]
-        )
+    resp = requests.post(
+        "https://api.resend.com/emails",
+        headers=headers,
+        json=payload,
+        timeout=20,
+    )
 
-    with smtplib.SMTP_SSL(MAIL_SMTP_HOST, MAIL_SMTP_PORT, timeout=20) as smtp:
-        smtp.login(MAIL_SENDER, MAIL_PASSWORD)
-        smtp.send_message(msg)
+    if resp.status_code >= 300:
+        raise RuntimeError(f"Resend error {resp.status_code}: {resp.text}")
 
-    print("Correo enviado a:", MAIL_RECIPIENT)
+    print("Correo enviado via API HTTPS a:", MAIL_RECIPIENT)
+    print("Respuesta Resend:", resp.text)
 
 
 def reconocer_persona(filepath):
@@ -213,7 +216,7 @@ def index():
     <body>
         <div class="topbar">
             <h1>Historial de accesos de la caja</h1>
-            <p>Reconocimiento facial automatico activo</p>
+            <p>Reconocimiento facial automático activo</p>
         </div>
     """
 
@@ -291,7 +294,7 @@ def upload():
         try:
             enviar_correo_evento(evento)
         except Exception as e:
-            print("Error enviando correo:", repr(e))
+            print("Error enviando correo por API HTTPS:", repr(e))
 
         return jsonify({
             "status": "ok",
