@@ -16,8 +16,8 @@ MODEL_DIR = "model"
 MODEL_PATH = os.path.join(MODEL_DIR, "lbph_model.yml")
 LABELS_PATH = os.path.join(MODEL_DIR, "labels.json")
 
-MAIL_SENDER = os.environ.get("MAIL_SENDER")
-MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
+MAIL_SENDER = os.environ.get("MAIL_SENDER", "sabes11343388@gmail.com")
+MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD","gufzvhikwfvkwwjo")
 MAIL_RECIPIENT = os.environ.get("MAIL_RECIPIENT", "sisaspelele17@gmail.com")
 MAIL_SMTP_HOST = os.environ.get("MAIL_SMTP_HOST", "smtp.gmail.com")
 MAIL_SMTP_PORT = int(os.environ.get("MAIL_SMTP_PORT", 465))
