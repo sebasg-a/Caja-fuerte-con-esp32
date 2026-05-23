@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify, send_from_directory
 import os
 import json
 import cv2
+import smtplib
+from email.message import EmailMessage
 from datetime import datetime
 
 app = Flask(__name__)
@@ -13,6 +15,12 @@ EVENTS_FILE = os.path.join(SAVE_DIR, "eventos.json")
 MODEL_DIR = "model"
 MODEL_PATH = os.path.join(MODEL_DIR, "lbph_model.yml")
 LABELS_PATH = os.path.join(MODEL_DIR, "labels.json")
+
+MAIL_SENDER = os.environ.get("MAIL_SENDER")
+MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
+MAIL_RECIPIENT = os.environ.get("MAIL_RECIPIENT", "sisaspelele17@gmail.com")
+MAIL_SMTP_HOST = os.environ.get("MAIL_SMTP_HOST", "smtp.gmail.com")
+MAIL_SMTP_PORT = int(os.environ.get("MAIL_SMTP_PORT", 465))
 
 os.makedirs(SAVE_DIR, exist_ok=True)
 
@@ -26,6 +34,7 @@ recognizer.read(MODEL_PATH)
 with open(LABELS_PATH, "r", encoding="utf-8") as f:
     LABEL_MAP = json.load(f)
 
+
 def cargar_eventos():
     if not os.path.exists(EVENTS_FILE):
         return []
@@ -35,9 +44,11 @@ def cargar_eventos():
     except Exception:
         return []
 
+
 def guardar_eventos(eventos):
     with open(EVENTS_FILE, "w", encoding="utf-8") as f:
         json.dump(eventos, f, indent=2, ensure_ascii=False)
+
 
 def registrar_evento(filename, accion, ip_origen, resultado, persona, confianza):
     eventos = cargar_eventos()
@@ -54,6 +65,51 @@ def registrar_evento(filename, accion, ip_origen, resultado, persona, confianza)
 
     eventos.insert(0, evento)
     guardar_eventos(eventos)
+    return evento
+
+
+def enviar_correo_evento(evento):
+    if not MAIL_SENDER or not MAIL_PASSWORD or not MAIL_RECIPIENT:
+        print("Correo no configurado: faltan variables de entorno")
+        return
+
+    asunto = f"[Caja fuerte] {evento['resultado']} - {evento['persona']}"
+
+    cuerpo = f"""
+Se registró un nuevo intento de acceso.
+
+Fecha: {evento['timestamp']}
+Archivo: {evento['filename']}
+Acción: {evento['accion']}
+Resultado: {evento['resultado']}
+Persona: {evento['persona']}
+Confianza: {evento['confianza']}
+IP origen: {evento['ip_origen']}
+"""
+
+    msg = EmailMessage()
+    msg["Subject"] = asunto
+    msg["From"] = MAIL_SENDER
+    msg["To"] = MAIL_RECIPIENT
+    msg.set_content(cuerpo)
+
+    filepath = os.path.join(SAVE_DIR, evento["filename"])
+    if os.path.exists(filepath):
+        with open(filepath, "rb") as f:
+            img_data = f.read()
+        msg.add_attachment(
+            img_data,
+            maintype="image",
+            subtype="jpeg",
+            filename=evento["filename"]
+        )
+
+    with smtplib.SMTP_SSL(MAIL_SMTP_HOST, MAIL_SMTP_PORT, timeout=20) as smtp:
+        smtp.login(MAIL_SENDER, MAIL_PASSWORD)
+        smtp.send_message(msg)
+
+    print("Correo enviado a:", MAIL_RECIPIENT)
+
 
 def reconocer_persona(filepath):
     img = cv2.imread(filepath)
@@ -100,9 +156,11 @@ def reconocer_persona(filepath):
         "confianza": float(confidence)
     }
 
+
 @app.route("/health")
 def health():
     return jsonify({"status": "ok"})
+
 
 @app.route("/")
 def index():
@@ -187,13 +245,16 @@ def index():
     """
     return html
 
+
 @app.route("/imagen/<filename>")
 def ver_imagen(filename):
     return send_from_directory(SAVE_DIR, filename)
 
+
 @app.route("/eventos")
 def ver_eventos():
     return jsonify(cargar_eventos())
+
 
 @app.route("/upload", methods=["POST"])
 def upload():
@@ -216,7 +277,7 @@ def upload():
 
         decision = reconocer_persona(filepath)
 
-        registrar_evento(
+        evento = registrar_evento(
             filename=filename,
             accion=decision["accion"],
             ip_origen=request.remote_addr,
@@ -224,6 +285,11 @@ def upload():
             persona=decision["persona"],
             confianza=decision["confianza"]
         )
+
+        try:
+            enviar_correo_evento(evento)
+        except Exception as e:
+            print("Error enviando correo:", e)
 
         return jsonify({
             "status": "ok",
@@ -241,6 +307,7 @@ def upload():
             "message": str(e),
             "accion": "rechazar"
         }), 500
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT, debug=False)
