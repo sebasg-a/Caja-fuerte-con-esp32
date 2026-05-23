@@ -15,10 +15,9 @@ MODEL_DIR = "model"
 MODEL_PATH = os.path.join(MODEL_DIR, "lbph_model.yml")
 LABELS_PATH = os.path.join(MODEL_DIR, "labels.json")
 
-# Resend / Email API
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-RESEND_FROM = os.environ.get("RESEND_FROM", "Caja Fuerte <notificaciones@tu-dominio.com>")
-MAIL_RECIPIENT = os.environ.get("MAIL_RECIPIENT", "sisaspelele17@gmail.com")
+RESEND_FROM = os.environ.get("RESEND_FROM", "onboarding@resend.dev")
+MAIL_RECIPIENT = os.environ.get("MAIL_RECIPIENT", "sabes11343388@gmail.com")
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "https://caja-fuerte-con-esp32.onrender.com")
 
 os.makedirs(SAVE_DIR, exist_ok=True)
@@ -69,7 +68,7 @@ def registrar_evento(filename, accion, ip_origen, resultado, persona, confianza)
 
 def enviar_correo_evento(evento):
     if not RESEND_API_KEY:
-        print("Correo no configurado: falta RESEND_API_KEY")
+        print("Falta RESEND_API_KEY")
         return
 
     image_url = f"{PUBLIC_BASE_URL}/imagen/{evento['filename']}"
@@ -112,7 +111,7 @@ def enviar_correo_evento(evento):
     if resp.status_code >= 300:
         raise RuntimeError(f"Resend error {resp.status_code}: {resp.text}")
 
-    print("Correo enviado via API HTTPS a:", MAIL_RECIPIENT)
+    print("Correo enviado via Resend a:", MAIL_RECIPIENT)
     print("Respuesta Resend:", resp.text)
 
 
@@ -216,7 +215,7 @@ def index():
     <body>
         <div class="topbar">
             <h1>Historial de accesos de la caja</h1>
-            <p>Reconocimiento facial automático activo</p>
+            <p>Reconocimiento facial automatico activo</p>
         </div>
     """
 
@@ -294,7 +293,7 @@ def upload():
         try:
             enviar_correo_evento(evento)
         except Exception as e:
-            print("Error enviando correo por API HTTPS:", repr(e))
+            print("Error enviando correo por Resend:", repr(e))
 
         return jsonify({
             "status": "ok",
