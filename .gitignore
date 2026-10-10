@@ -2,6 +2,11 @@
 recibidas/
 eventos.json
 *.jpg
+# Documentation images
+!docs/images/*.jpg
+!docs/images/*.jpeg
+!docs/images/*.png
+
 
 # Python
 __pycache__/
