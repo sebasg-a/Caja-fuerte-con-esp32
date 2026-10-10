@@ -1,7 +1,22 @@
+# Project generated files
 recibidas/
 eventos.json
 *.jpg
+
+# Python
 __pycache__/
-.env
-venv/
+*.py[cod]
+.pytest_cache/
 .venv/
+venv/
+
+# Environment variables and secrets
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
